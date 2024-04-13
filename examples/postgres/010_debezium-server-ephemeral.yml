@@ -1,18 +1,19 @@
 apiVersion: debezium.io/v1alpha1
 kind: DebeziumServer
 metadata:
-  name: my-debezium
+  name: nightout-debezium-group-0
 spec:
-  image: quay.io/debezium/server:2.6.0-SNAPSHOT
+  image: quay.io/debezium/server:2.6.0.Final
   quarkus:
     config:
       log.console.json: false
       kubernetes-config.enabled: true
       kubernetes-config.secrets: postgresql-credentials
+      #http.port: 8080
   sink:
     type: kafka
     config:
-      producer.bootstrap.servers: dbz-kafka-kafka-bootstrap:9092
+      producer.bootstrap.servers: nightout-cluster-kafka-bootstrap:9092
       producer.key.serializer: org.apache.kafka.common.serialization.StringSerializer
       producer.value.serializer: org.apache.kafka.common.serialization.StringSerializer
   source:
@@ -21,10 +22,18 @@ spec:
       tasks.max:
       offset.storage.file.filename: /debezium/data/offsets.dat
       database.history: io.debezium.relational.history.FileDatabaseHistory
-      database.hostname: postgresql
+      database.hostname: citusdemo-0-leader
       database.port: 5432
       database.user: ${POSTGRES_USER}
       database.password: ${POSTGRES_PASSWORD}
       database.dbname: ${POSTGRES_DB}
-      topic.prefix: inventory
-      schema.include.list: inventory
+      topic.prefix: outbox-worker-0
+      table.include.list: public.outbox_messages
+      publication.autocreate.mode: filtered
+      skipped.operations: t,u,d
+      heartbeat.interval.ms: 1000
+      snapshot.mode: "initial"
+      bootstrap.servers: nightout-cluster-kafka-bootstrap:9092
+      kafka.topic: outbox-worker-0.public.outbox_messages
+      slot.name: debezium
+      plugin.name: pgoutput # this is the change that did it. No more decoderbufs
